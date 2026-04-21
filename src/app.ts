@@ -17,9 +17,10 @@ const app = express();
 const cors = require('cors');
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://api.guiasqueconectan.ml-ware.com'], // Dominios permitidos
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: ['http://localhost:5173', 'https://app.guiasqueconectan.ml-ware.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 
 // ── Body parsers ──────────────────────────────────────────
