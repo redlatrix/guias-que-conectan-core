@@ -14,6 +14,13 @@ import guiaRoutes     from './routes/guia.routes';
 import './config/storage';
 
 const app = express();
+const cors = require('cors');
+
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://api.guiasqueconectan.ml-ware.com'], // Dominios permitidos
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // ── Body parsers ──────────────────────────────────────────
 app.use(express.json({ limit: '5mb' }));
