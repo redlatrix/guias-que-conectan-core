@@ -87,9 +87,9 @@ export interface RecursoComplementario {
 }
 
 export interface JwtPayload {
-  sub: number;       // usuario_id
+  id: number;        // usuario_id — viene del auth-api como "id"
+  email: string;
   rol: string;       // 'admin' | 'docente'
-  docenteId?: number;
   iat?: number;
   exp?: number;
 }

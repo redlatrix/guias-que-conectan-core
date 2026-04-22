@@ -53,7 +53,7 @@ export const guiaController = {
 
       let docente_id: number | undefined;
       if (mis_guias === 'true') {
-        docente_id = req.user!.docenteId ?? req.user!.sub;
+        docente_id = req.user!.id;
       }
 
       const guias = await guiaService.listar({
@@ -81,7 +81,7 @@ export const guiaController = {
         estado?:   string;
       };
 
-      const docente_id = req.user!.docenteId ?? req.user!.sub;
+      const docente_id = req.user!.id;
 
       const guias = await guiaService.listar({
         docente_id,

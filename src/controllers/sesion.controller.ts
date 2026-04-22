@@ -8,7 +8,7 @@ export const sesionController = {
   async crear(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const body = req.body as CrearSesionDTO;
-      const docente_id = req.user!.docenteId ?? req.user!.sub;
+      const docente_id = req.user!.id;
 
       const sesion = await sesionService.crear({
         docente_id,
