@@ -165,4 +165,14 @@ export const guiaRepository = {
     );
     return this.findById(id);
   },
+
+  async findAllPublicas(): Promise<Guia[]> {
+    const [rows] = await pool.query<RowDataPacket[]>(`
+      SELECT g.*
+      FROM guia g
+      WHERE g.estado = 'publicado' AND g.es_version_activa = 1
+      ORDER BY g.creado_en DESC
+    `);
+    return rows.map(parseGuia);
+  },
 };

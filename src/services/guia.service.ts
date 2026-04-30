@@ -61,7 +61,24 @@ export const guiaService = {
     // 5. Llamar a ChatGPT
     console.log('🤖 Consultando ChatGPT...');
     console.log(`   DBA: ${dba.codigo_men} — Grado ${dba.grado_numero}: ${dba.grado_nombre}`);
-    const respuestaRaw = await openaiService.chat(messages);
+    let respuestaRaw = await openaiService.chat(messages);
+
+    // 5b. Fallback: si GPT no incluyó el tag [IMAGE:], lo inyectamos
+    if (!respuestaRaw.includes('[IMAGE:')) {
+      console.log('⚠️  GPT no incluyó [IMAGE:], inyectando fallback...');
+      const descripcionFallback = buildImageFallback(dba, data.prompt_docente);
+      const tagFallback = `\n\n[IMAGE: "${descripcionFallback}"]\n\n`;
+      // Insertar justo antes de la sección ## ACTIVIDADES DE DESARROLLO (o al final si no existe)
+      const marcador = respuestaRaw.match(/^##\s+ACTIVIDADES DE DESARROLLO/im);
+      if (marcador?.index !== undefined) {
+        respuestaRaw =
+          respuestaRaw.slice(0, marcador.index) +
+          tagFallback +
+          respuestaRaw.slice(marcador.index);
+      } else {
+        respuestaRaw += tagFallback;
+      }
+    }
 
     // 6. Crear registro temporal de la guía para vincular recursos
     const titulo = extraerTitulo(respuestaRaw) || `Guía ${dba.codigo_men} — ${dba.grado_nombre}`;
@@ -183,6 +200,18 @@ export const guiaService = {
     return guiaRepository.findAll(filtros);
   },
 
+  async listarPublicas(): Promise<Guia[]> {
+    return guiaRepository.findAllPublicas();
+  },
+
+  async obtenerPublica(id: number): Promise<Guia> {
+    const guia = await guiaRepository.findById(id);
+    if (!guia || guia.estado !== 'publicado') {
+      throw Object.assign(new Error('Guía no encontrada'), { status: 404 });
+    }
+    return guia;
+  },
+
   async editar(id: number, data: {
     titulo?: string;
     contenido_json?: BloqueContenido[];
@@ -196,6 +225,13 @@ export const guiaService = {
     const guia = await guiaRepository.findById(id);
     if (!guia) throw Object.assign(new Error('Guía no encontrada'), { status: 404 });
     return (await guiaRepository.publish(id))!;
+  },
+
+  async regenerarImagen(guiaId: number, prompt: string): Promise<{ url: string }> {
+    const guia = await guiaRepository.findById(guiaId);
+    if (!guia) throw Object.assign(new Error('Guía no encontrada'), { status: 404 });
+    const url = await imageParserService.generarImagen(prompt, guiaId);
+    return { url };
   },
 };
 
@@ -243,8 +279,14 @@ Debes generar la guía siguiendo esta estructura de bloques. Para cada sección 
 
 ### REGLAS DE FORMATO (CRÍTICO):
 1. **FORMATO DE SALIDA**: Entrega todo en Markdown limpio y bien estructurado.
-2. **INSERCIÓN DE IMÁGENES**: Analiza dónde sería pedagógicamente útil una imagen. En esos puntos, inserta EXACTAMENTE esta etiqueta:
-   [IMAGE: "descripción detallada para DALL-E sobre una ilustración educativa de este tema"]
+2. **INSERCIÓN DE IMÁGENES — OBLIGATORIO**: DEBES incluir exactamente 1 etiqueta [IMAGE:] en alguna sección de la guía. Si no la incluyes, la guía estará incompleta. La descripción debe indicar QUÉ OBJETOS Y SÍMBOLOS VISUALES concretos deben aparecer en la ilustración. Formato exacto:
+   [IMAGE: "objetos y símbolos visuales específicos del tema, separados por comas"]
+   Ejemplos:
+   - Constitución 1991: [IMAGE: "libro de la constitución colombiana, balanza de justicia, bandera de Colombia, manos sosteniendo derechos, paloma de la paz"]
+   - Globalización: [IMAGE: "globo terráqueo con flechas de intercambio, contenedor de barco, teléfono inteligente, gráfica económica, banderas de diferentes países"]
+   - Regiones naturales: [IMAGE: "mapa de Colombia dividido en colores por región, cóndor andino, palma de cera, selva amazónica, mar caribe azul"]
+   - Independencia: [IMAGE: "Simón Bolívar, mapa de Nueva Granada, bandera tricolor colombiana, año 1810, espada y pergamino"]
+   RECUERDA: la etiqueta [IMAGE:] es OBLIGATORIA. Ponla en la sección de ACTIVIDADES DE DESARROLLO o PROPÓSITOS.
 3. **REALISMO**: Las actividades deben ser posibles para ${numero_estudiantes} estudiantes en ${duracion_sesion}.
 4. **NO ALUCINACIÓN**: Si sugieres un recurso externo (video, libro), no inventes el nombre; descríbelo como "Recurso sugerido sobre [Tema]".
 5. **CONTEXTUALIZACIÓN**: Usa ejemplos del contexto colombiano, territorios y realidades locales.`;
@@ -256,4 +298,22 @@ Debes generar la guía siguiendo esta estructura de bloques. Para cada sección 
 function extraerTitulo(text: string): string | null {
   const match = text.match(/^#\s+(.+)$/m);
   return match ? match[1].trim() : null;
+}
+
+/**
+ * Construye una descripción visual de fallback para DALL-E
+ * cuando GPT no incluyó el tag [IMAGE:] en su respuesta.
+ */
+function buildImageFallback(dba: DBAConContexto, promptDocente: string): string {
+  const tema = dba.competencia_nombre ?? dba.enunciado_oficial.slice(0, 80);
+  const grado = `grado ${dba.grado_numero}`;
+  // Tomamos las primeras palabras clave del prompt del docente para contexto
+  const palabrasClave = promptDocente
+    .replace(/[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]/g, '')
+    .split(/\s+/)
+    .filter((w) => w.length > 4)
+    .slice(0, 5)
+    .join(', ');
+
+  return `ilustración educativa sobre ${tema} para ${grado} en Colombia, con elementos visuales como: ${palabrasClave || tema}, mapa de Colombia, estudiantes, libros`;
 }

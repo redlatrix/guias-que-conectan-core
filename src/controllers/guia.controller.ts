@@ -1,9 +1,29 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest, EstadoGuia } from '../models/interfaces';
 import { guiaService } from '../services/guia.service';
 import { GenerarGuiaDTO, IterarGuiaDTO, EditarGuiaDTO } from '../validators/guia.schema';
 
 export const guiaController = {
+
+  async listarPublicas(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const guias = await guiaService.listarPublicas();
+      res.json(guias);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async obtenerPublica(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      const guia = await guiaService.obtenerPublica(id);
+      res.json(guia);
+    } catch (err: any) {
+      if (err.status) res.status(err.status).json({ error: err.message });
+      else next(err);
+    }
+  },
 
   async generar(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -123,6 +143,19 @@ export const guiaController = {
       const id   = Number(req.params.id);
       const guia = await guiaService.publicar(id);
       res.json({ mensaje: 'Guía publicada exitosamente', guia });
+    } catch (err: any) {
+      if (err.status) res.status(err.status).json({ error: err.message });
+      else next(err);
+    }
+  },
+
+  async regenerarImagen(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id     = Number(req.params.id);
+      const prompt = String(req.body?.prompt ?? '').trim();
+      if (!prompt) { res.status(400).json({ error: 'El campo prompt es requerido' }); return; }
+      const result = await guiaService.regenerarImagen(id, prompt);
+      res.json(result);
     } catch (err: any) {
       if (err.status) res.status(err.status).json({ error: err.message });
       else next(err);

@@ -6,6 +6,10 @@ import { generarGuiaSchema, iterarGuiaSchema, editarGuiaSchema } from '../valida
 
 const router = Router();
 
+// Rutas públicas — no requieren autenticación
+router.get('/publicas',     guiaController.listarPublicas  as any);
+router.get('/publicas/:id', guiaController.obtenerPublica  as any);
+
 router.use(authMiddleware as any);
 
 // Generar guía con IA
@@ -17,8 +21,9 @@ router.get('/',               guiaController.listar    as any);
 router.get('/:id',            guiaController.obtener   as any);
 
 // Acciones sobre una guía específica
-router.post('/:id/iterate',   validate(iterarGuiaSchema), guiaController.iterar   as any);
-router.put('/:id',            validate(editarGuiaSchema),  guiaController.editar   as any);
-router.post('/:id/publish',                                guiaController.publicar as any);
+router.post('/:id/iterate',          validate(iterarGuiaSchema), guiaController.iterar          as any);
+router.put('/:id',                   validate(editarGuiaSchema),  guiaController.editar          as any);
+router.post('/:id/publish',                                       guiaController.publicar        as any);
+router.post('/:id/regenerar-imagen',                              guiaController.regenerarImagen as any);
 
 export default router;
