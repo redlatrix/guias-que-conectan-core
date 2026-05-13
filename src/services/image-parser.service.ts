@@ -9,9 +9,9 @@ export const imageParserService = {
   /** Genera una sola imagen DALL-E y la persiste. Devuelve la URL local. */
   async generarImagen(prompt: string, guiaId: number): Promise<string> {
     const dallePrompt = `Colorful educational infographic illustration, flat design, isometric style, soft pastel colors, clean and simple composition, no text labels, no photorealism, no real people. Visual elements related to: ${prompt}`;
-    const tempUrl  = await openaiService.generateImage(dallePrompt);
+    const b64      = await openaiService.generateImage(dallePrompt);
     const filename = `${uuidv4()}.png`;
-    const localUrl = await imageStorageService.download(tempUrl, filename);
+    const localUrl = await imageStorageService.saveBase64(b64, filename);
     await recursoRepository.create({
       guia_id: guiaId,
       tipo: 'IMAGEN',
@@ -30,18 +30,25 @@ export const imageParserService = {
       const fullTag = match[0];
       const prompt  = match[1].trim();
 
-      try {
+      // 0. Respetar flag de habilitación de imágenes
+      const imageEnabled = process.env.OPENAI_IMAGE_ENABLED !== 'false';
+
+      // 1. Buscar recursos siempre — independiente de si la imagen funciona
+      const recursos = await buscarRecursos(prompt);
+      const recursosBlock = recursos.length > 0
+        ? '\n\n**📚 Recursos para profundizar:**\n' + recursos.join('\n')
+        : '';
+
+      // 2. Generar imagen (puede fallar sin afectar los recursos)
+      let imagenMarkdown = ''; // vacío si imagen deshabilitada o falla
+      if (imageEnabled) try {
         console.log(`🎨 Generando imagen: "${prompt}"`);
 
-        // 1. DALL-E con estilo académico prefijado
         const dallePrompt = `Colorful educational infographic illustration, flat design, isometric style, soft pastel colors, clean and simple composition, no text labels, no photorealism, no real people. Visual elements related to: ${prompt}`;
-        const tempUrl = await openaiService.generateImage(dallePrompt);
-
-        // 2. Descargar y guardar en disco
+        const b64      = await openaiService.generateImage(dallePrompt);
         const filename = `${uuidv4()}.png`;
-        const localUrl = await imageStorageService.download(tempUrl, filename);
+        const localUrl = await imageStorageService.saveBase64(b64, filename);
 
-        // 3. Registrar en BD
         await recursoRepository.create({
           guia_id: guiaId,
           tipo: 'IMAGEN',
@@ -49,25 +56,15 @@ export const imageParserService = {
           prompt_generacion: prompt,
         });
 
-        // 4. Buscar recursos reales del tema
-        const recursos = await buscarRecursos(prompt);
-        const recursosBlock = recursos.length > 0
-          ? '\n\n**📚 Recursos para profundizar:**\n' + recursos.join('\n')
-          : '';
-
-        // 5. Reemplazar etiqueta por imagen + bloque de recursos
-        const markdownImg = `![${prompt}](${localUrl})`;
-        processedText = processedText.replace(fullTag, markdownImg + recursosBlock);
-
+        imagenMarkdown = `![${prompt}](${localUrl})`;
         console.log(`✅ Imagen guardada: ${localUrl} | ${recursos.length} recursos encontrados`);
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         console.error(`❌ Error procesando imagen "${prompt}": ${errMsg}`);
-        processedText = processedText.replace(
-          fullTag,
-          `[⚠️ Imagen no disponible: ${prompt}]`
-        );
       }
+
+      // 3. Reemplazar etiqueta — recursos aparecen siempre
+      processedText = processedText.replace(fullTag, imagenMarkdown + recursosBlock);
     }
 
     return processedText;

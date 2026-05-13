@@ -11,6 +11,7 @@ import { STORAGE_PATH, PUBLIC_STORAGE_URL } from '../config/storage';
  */
 export const imageStorageService = {
 
+  /** Descarga desde URL temporal (legacy — DALL-E 2/3, ya retirados) */
   async download(url: string, filename: string): Promise<string> {
     const filePath = path.join(STORAGE_PATH, filename);
 
@@ -20,8 +21,13 @@ export const imageStorageService = {
     });
 
     fs.writeFileSync(filePath, response.data);
+    return `${PUBLIC_STORAGE_URL}/${filename}`;
+  },
 
-    // URL pública: /storage/images/uuid.png
+  /** Guarda imagen desde string base64 (gpt-image-1 / gpt-image-1-mini) */
+  async saveBase64(b64: string, filename: string): Promise<string> {
+    const filePath = path.join(STORAGE_PATH, filename);
+    fs.writeFileSync(filePath, Buffer.from(b64, 'base64'));
     return `${PUBLIC_STORAGE_URL}/${filename}`;
   },
 };

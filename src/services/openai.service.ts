@@ -34,19 +34,23 @@ export const openaiService = {
    * Genera una imagen con DALL-E a partir de un prompt.
    * Retorna la URL temporal (válida ~60 minutos).
    */
+  /**
+   * Genera una imagen con gpt-image-1 / gpt-image-1-mini.
+   * Los modelos nuevos devuelven base64 (b64_json), no URL temporal.
+   * Retorna el string base64 para que el caller lo persista en disco.
+   */
   async generateImage(prompt: string): Promise<string> {
-    const model = process.env.OPENAI_IMAGE_MODEL || 'dall-e-3';
+    const model = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1-mini';
 
     const response = await openaiClient.images.generate({
       model,
       prompt,
       n: 1,
       size: '1024x1024',
-      response_format: 'url',
     });
 
-    const url = response.data?.[0]?.url;
-    if (!url) throw new Error('DALL-E no devolvió URL de imagen');
-    return url;
+    const b64 = response.data?.[0]?.b64_json;
+    if (!b64) throw new Error('gpt-image-1 no devolvió imagen en base64');
+    return b64;
   },
 };
