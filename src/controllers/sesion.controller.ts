@@ -13,6 +13,7 @@ export const sesionController = {
       const sesion = await sesionService.crear({
         docente_id,
         dba_catalogo_id: body.dba_catalogo_id,
+        competencia_id:  body.competencia_id ?? null,
         modelo_ia:       body.modelo_ia,
       });
 

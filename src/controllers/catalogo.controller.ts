@@ -25,14 +25,9 @@ export const catalogoController = {
 
   async getDBAs(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { grado_id, competencia_id } = req.query as {
-        grado_id?: string;
-        competencia_id?: string;
-      };
-
+      const { grado_id } = req.query as { grado_id?: string };
       const dbas = await catalogoRepository.findDBAs(
-        grado_id      ? Number(grado_id)      : undefined,
-        competencia_id ? Number(competencia_id) : undefined
+        grado_id ? Number(grado_id) : undefined
       );
       res.json(dbas);
     } catch (err) {

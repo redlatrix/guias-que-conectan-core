@@ -7,13 +7,16 @@ export const sesionRepository = {
   async create(data: {
     docente_id: number;
     dba_catalogo_id: number;
+    competencia_id?: number | null;
     modelo_ia: string;
     prompt_sistema?: string;
   }): Promise<SesionGeneracion> {
     const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO sesion_generacion (docente_id, dba_catalogo_id, modelo_ia, prompt_sistema)
-       VALUES (?, ?, ?, ?)`,
-      [data.docente_id, data.dba_catalogo_id, data.modelo_ia, data.prompt_sistema ?? null]
+      `INSERT INTO sesion_generacion
+         (docente_id, dba_catalogo_id, competencia_id, modelo_ia, prompt_sistema)
+       VALUES (?, ?, ?, ?, ?)`,
+      [data.docente_id, data.dba_catalogo_id, data.competencia_id ?? null,
+       data.modelo_ia, data.prompt_sistema ?? null]
     );
     const sesion = await this.findById(result.insertId);
     return sesion!;

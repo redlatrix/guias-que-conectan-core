@@ -99,13 +99,12 @@ export const guiaRepository = {
     try {
       await conn.beginTransaction();
 
-      // Desactivar versión anterior
       await conn.query(
         'UPDATE guia SET es_version_activa = 0 WHERE id = ?',
         [data.guia_anterior_id]
       );
 
-      // Crear nueva versión
+
       const [result] = await conn.query<ResultSetHeader>(
         `INSERT INTO guia (sesion_id, dba_catalogo_id, titulo, contenido_json, version_numero, estado, es_version_activa)
          VALUES (?, ?, ?, ?, ?, 'borrador', 1)`,

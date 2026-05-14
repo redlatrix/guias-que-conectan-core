@@ -2,12 +2,9 @@ import { RowDataPacket } from 'mysql2/promise';
 import pool from '../config/db';
 import { Grado, CompetenciaCS, DBACatalogo } from '../models/interfaces';
 
-
 export interface DBAConContexto extends DBACatalogo {
-  grado_nombre:      string;
-  grado_numero:      number;
-  competencia_nombre: string;
-  competencia_tipo:  string;
+  grado_nombre: string;
+  grado_numero: number;
 }
 
 export const catalogoRepository = {
@@ -33,17 +30,13 @@ export const catalogoRepository = {
     return rows as CompetenciaCS[];
   },
 
-  async findDBAs(gradoId?: number, competenciaId?: number): Promise<DBACatalogo[]> {
+  async findDBAs(gradoId?: number): Promise<DBACatalogo[]> {
     let sql = 'SELECT * FROM dba_catalogo WHERE 1=1';
     const params: number[] = [];
 
     if (gradoId) {
       sql += ' AND grado_id = ?';
       params.push(gradoId);
-    }
-    if (competenciaId) {
-      sql += ' AND competencia_id = ?';
-      params.push(competenciaId);
     }
     sql += ' ORDER BY codigo_men ASC';
 
@@ -60,24 +53,29 @@ export const catalogoRepository = {
   },
 
   /**
-   * Devuelve el DBA con los nombres completos del grado y la competencia.
-   * Se usa para construir el system prompt enriquecido de ChatGPT.
+   * Devuelve el DBA con los datos del grado.
+   * Se usa para construir el system prompt de ChatGPT.
    */
   async findDBAWithContext(id: number): Promise<DBAConContexto | null> {
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT
-         d.id, d.grado_id, d.competencia_id, d.codigo_men,
+         d.id, d.grado_id, d.codigo_men,
          d.enunciado_oficial, d.evidencias_aprendizaje, d.creado_en,
-         g.nombre   AS grado_nombre,
-         g.numero   AS grado_numero,
-         c.nombre   AS competencia_nombre,
-         c.tipo_cs  AS competencia_tipo
+         g.nombre AS grado_nombre,
+         g.numero AS grado_numero
        FROM dba_catalogo d
-       INNER JOIN grado          g ON g.id = d.grado_id
-       INNER JOIN competencia_cs c ON c.id = d.competencia_id
+       INNER JOIN grado g ON g.id = d.grado_id
        WHERE d.id = ?`,
       [id]
     );
     return rows[0] ? (rows[0] as DBAConContexto) : null;
+  },
+
+  async findCompetenciaById(id: number): Promise<CompetenciaCS | null> {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM competencia_cs WHERE id = ?',
+      [id]
+    );
+    return rows[0] ? (rows[0] as CompetenciaCS) : null;
   },
 };

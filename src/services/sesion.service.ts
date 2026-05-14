@@ -7,6 +7,7 @@ export const sesionService = {
   async crear(data: {
     docente_id: number;
     dba_catalogo_id: number;
+    competencia_id?: number | null;
     modelo_ia?: string;
   }): Promise<SesionGeneracion> {
     // Verificar que el DBA existe
@@ -20,6 +21,7 @@ export const sesionService = {
     return sesionRepository.create({
       docente_id:      data.docente_id,
       dba_catalogo_id: data.dba_catalogo_id,
+      competencia_id:  data.competencia_id ?? null,
       modelo_ia:       modelo,
     });
   },

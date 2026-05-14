@@ -30,10 +30,8 @@ export const imageParserService = {
       const fullTag = match[0];
       const prompt  = match[1].trim();
 
-      // 0. Respetar flag de habilitación de imágenes
       const imageEnabled = process.env.OPENAI_IMAGE_ENABLED !== 'false';
 
-      // 1. Buscar recursos siempre — independiente de si la imagen funciona
       const recursos = await buscarRecursos(prompt);
       const recursosBlock = recursos.length > 0
         ? '\n\n**📚 Recursos para profundizar:**\n' + recursos.join('\n')
@@ -89,7 +87,12 @@ async function buscarRecursos(tema: string): Promise<string[]> {
         srlimit:  '4',
         srprop:   'title',
         format:   'json',
+        origin:   '*',
       },
+      headers: {
+      'User-Agent': 'GuiasQueConectan/1.0 (maria.mejia51@correo.tdea.edu.co)',
+      'Content-Type': 'application/json'
+    },
       timeout: 6000,
     });
 

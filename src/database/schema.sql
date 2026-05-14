@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS grado (
   id      INT            NOT NULL AUTO_INCREMENT,
   nombre  VARCHAR(100)   NOT NULL,
   numero  TINYINT        NOT NULL,
-  ciclo   VARCHAR(80)    NOT NULL,
   area    VARCHAR(80)    NOT NULL DEFAULT 'ciencias_sociales',
 
   CONSTRAINT pk_grado PRIMARY KEY (id),
@@ -35,16 +34,14 @@ CREATE TABLE IF NOT EXISTS competencia_cs (
 CREATE TABLE IF NOT EXISTS dba_catalogo (
   id                     INT          NOT NULL AUTO_INCREMENT,
   grado_id               INT          NOT NULL,
-  competencia_id         INT          NOT NULL,
   codigo_men             VARCHAR(30)  NOT NULL,
   enunciado_oficial      TEXT         NOT NULL,
   evidencias_aprendizaje TEXT,
   creado_en              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  CONSTRAINT pk_dba           PRIMARY KEY (id),
-  CONSTRAINT uq_dba_codigo    UNIQUE (codigo_men),
-  CONSTRAINT fk_dba_grado     FOREIGN KEY (grado_id)       REFERENCES grado(id),
-  CONSTRAINT fk_dba_competencia FOREIGN KEY (competencia_id) REFERENCES competencia_cs(id)
+  CONSTRAINT pk_dba        PRIMARY KEY (id),
+  CONSTRAINT uq_dba_codigo UNIQUE (codigo_men),
+  CONSTRAINT fk_dba_grado  FOREIGN KEY (grado_id) REFERENCES grado(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Sesión de Generación ─────────────────────────────────────
@@ -54,6 +51,7 @@ CREATE TABLE IF NOT EXISTS sesion_generacion (
   id              INT          NOT NULL AUTO_INCREMENT,
   docente_id      INT          NOT NULL,
   dba_catalogo_id INT          NOT NULL,
+  competencia_id  INT          NULL,
   modelo_ia       VARCHAR(60)  NOT NULL DEFAULT 'gpt-4o-mini',
   estado          ENUM('activa','completada','cancelada') NOT NULL DEFAULT 'activa',
   prompt_sistema  TEXT,

@@ -10,7 +10,7 @@ export const iteracionRepository = {
     prompt_docente: string;
     respuesta_ia_raw: string;
   }): Promise<IteracionIA> {
-    // Obtener el número de iteración actual para esta guía
+ 
     const [countRows] = await pool.query<RowDataPacket[]>(
       'SELECT COALESCE(MAX(numero_iteracion), 0) AS max_iter FROM iteracion_ia WHERE guia_id = ?',
       [data.guia_id]

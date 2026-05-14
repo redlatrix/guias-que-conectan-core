@@ -6,7 +6,6 @@ export interface Grado {
   id: number;
   nombre: string;
   numero: number;
-  ciclo: string;
   area: string;
 }
 
@@ -21,7 +20,6 @@ export interface CompetenciaCS {
 export interface DBACatalogo {
   id: number;
   grado_id: number;
-  competencia_id: number;
   codigo_men: string;
   enunciado_oficial: string;
   evidencias_aprendizaje: string;
@@ -34,6 +32,7 @@ export interface SesionGeneracion {
   id: number;
   docente_id: number;
   dba_catalogo_id: number;
+  competencia_id?: number | null;
   modelo_ia: string;
   estado: EstadoSesion;
   prompt_sistema: string | null;

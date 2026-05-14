@@ -5,7 +5,7 @@ import { catalogoRepository, DBAConContexto } from '../repositories/catalogo.rep
 import { openaiService, ChatMessage } from './openai.service';
 import { imageParserService } from './image-parser.service';
 import { markdownToJson } from '../utils/markdown-to-json';
-import { Guia, BloqueContenido, EstadoGuia } from '../models/interfaces';
+import { Guia, BloqueContenido, EstadoGuia, CompetenciaCS } from '../models/interfaces';
 
 /**
  * Orquestador principal del microservicio.
@@ -28,14 +28,19 @@ export const guiaService = {
       throw Object.assign(new Error('Sesión no encontrada'), { status: 404 });
     }
 
-    // 2. Obtener el DBA con contexto completo (nombre grado, nombre competencia)
+    // 2. Obtener el DBA con contexto de grado
     const dba = await catalogoRepository.findDBAWithContext(sesion.dba_catalogo_id);
     if (!dba) {
       throw Object.assign(new Error('DBA del catálogo no encontrado'), { status: 404 });
     }
 
+    // 2b. Obtener la competencia como metadato independiente desde la sesión
+    const competencia = sesion.competencia_id
+      ? await catalogoRepository.findCompetenciaById(sesion.competencia_id)
+      : null;
+
     // 3. Construir el prompt estructurado final
-    const promptCompleto = buildPromptEstructurado(dba, {
+    const promptCompleto = buildPromptEstructurado(dba, competencia, {
       solicitud_docente:  data.prompt_docente,
       numero_estudiantes: data.numero_estudiantes,
       duracion_sesion:    data.duracion_sesion,
@@ -243,6 +248,7 @@ export const guiaService = {
  */
 function buildPromptEstructurado(
   dba: DBAConContexto,
+  competencia: CompetenciaCS | null,
   opciones: {
     solicitud_docente:  string;
     numero_estudiantes: number;
@@ -256,7 +262,7 @@ function buildPromptEstructurado(
 ### CONTEXTO DEL DBA:
 - Área: Ciencias Sociales
 - Grado: ${dba.grado_numero}° — ${dba.grado_nombre}
-- Competencia: ${dba.competencia_nombre}
+- Competencia: ${competencia?.nombre ?? 'Ciencias Sociales'}
 - DBA: ${dba.enunciado_oficial}
 - Evidencias de aprendizaje: ${dba.evidencias_aprendizaje ?? 'No especificadas'}
 
@@ -325,6 +331,6 @@ function extraerTitulo(text: string): string | null {
  * cuando GPT no incluyó el tag [IMAGE:] en su respuesta.
  */
 function buildImageFallback(dba: DBAConContexto, promptDocente: string): string {
-  const tema = dba.competencia_nombre || "Ciencias Sociales";
+  const tema = dba.grado_nombre || "Ciencias Sociales";
   return `Ilustración educativa profesional y minimalista sobre ${tema}, contexto escolar colombiano, elementos visuales relacionados con ${promptDocente.slice(0, 50)}`;
 }
