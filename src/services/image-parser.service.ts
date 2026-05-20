@@ -21,10 +21,13 @@ export const imageParserService = {
     return localUrl;
   },
 
-  async process(rawText: string, guiaId: number): Promise<string> {
+  async process(rawText: string, guiaId: number, temaDocente?: string): Promise<string> {
     const IMAGE_TAG = /\[IMAGE:\s*"([^"]+)"\]/g;
     let processedText = rawText;
     const matches = [...rawText.matchAll(IMAGE_TAG)];
+
+    const preguntaProblematizadora = extraerPreguntaProblematizadora(rawText);
+    const temaRecursos = preguntaProblematizadora ?? temaDocente;
 
     for (const match of matches) {
       const fullTag = match[0];
@@ -32,7 +35,7 @@ export const imageParserService = {
 
       const imageEnabled = process.env.OPENAI_IMAGE_ENABLED !== 'false';
 
-      const recursos = await buscarRecursos(prompt);
+      const recursos = await buscarRecursos(temaRecursos ?? prompt);
       const recursosBlock = recursos.length > 0
         ? '\n\n**📚 Recursos para profundizar:**\n' + recursos.join('\n')
         : '';
@@ -68,6 +71,17 @@ export const imageParserService = {
     return processedText;
   },
 };
+
+/**
+ * Extrae el texto de la sección ## PREGUNTA PROBLEMATIZADORA del Markdown generado por GPT.
+ * Devuelve null si la sección no existe o está vacía.
+ */
+function extraerPreguntaProblematizadora(markdown: string): string | null {
+  const match = markdown.match(/##\s+PREGUNTA PROBLEMATIZADORA\s*\n+([\s\S]+?)(?=\n##\s|\n###\s|$)/i);
+  if (!match) return null;
+  const texto = match[1].trim().replace(/\*\*/g, '').replace(/\n+/g, ' ');
+  return texto.length > 10 ? texto : null;
+}
 
 /**
  * Busca recursos reales del tema: artículos de Wikipedia en español,

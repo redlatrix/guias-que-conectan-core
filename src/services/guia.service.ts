@@ -105,7 +105,7 @@ export const guiaService = {
 
     // 8. Procesar etiquetas [IMAGE: "..."] → DALL-E → disco → BD
     console.log('🖼️  Procesando imágenes...');
-    const textoProcesado = await imageParserService.process(respuestaRaw, guiaTemporal.id);
+    const textoProcesado = await imageParserService.process(respuestaRaw, guiaTemporal.id, data.prompt_docente);
 
     // 9. Convertir Markdown procesado → array de bloques JSON
     const contenidoJson = markdownToJson(textoProcesado);
@@ -182,7 +182,7 @@ export const guiaService = {
       respuesta_ia_raw: respuestaRaw,
     });
 
-    const textoProcesado = await imageParserService.process(respuestaRaw, nuevaGuia.id);
+    const textoProcesado = await imageParserService.process(respuestaRaw, nuevaGuia.id, data.prompt_docente);
     const contenidoJson  = markdownToJson(textoProcesado);
 
     const guiaFinal = await guiaRepository.update(nuevaGuia.id, { titulo, contenido_json: contenidoJson });
@@ -240,7 +240,84 @@ export const guiaService = {
   },
 };
 
-// ── Helpers privados ─────────────────────────────────────────
+
+interface ComplejidadGrado {
+  nivel: string;
+  descripcion: string;
+  preguntasVisuales: number;
+  taxonomiaVisual: string;
+  conceptosClave: number;
+  lineasReflexion: number;
+}
+
+function getComplejidadPorGrado(grado_numero: number): ComplejidadGrado {
+  if (grado_numero <= 3) {
+    return {
+      nivel: 'Complejidad Inicial',
+      descripcion:
+        'Enfoca el contenido en el reconocimiento del entorno cercano (familia, escuela, barrio) y nociones básicas de tiempo y espacio. ' +
+        'Usa lenguaje sumamente sencillo y cercano. ' +
+        'Las actividades deben ser lúdicas, gráficas, de emparejar, dibujar o describir de forma oral y escrita muy corta. ' +
+        'Las preguntas deben tener respuestas de una o dos palabras o frases muy breves.',
+      preguntasVisuales: 2,
+      taxonomiaVisual: 'Recordar/Comprender (respuestas cortas)',
+      conceptosClave: 2,
+      lineasReflexion: 3,
+    };
+  }
+  if (grado_numero <= 5) {
+    return {
+      nivel: 'Complejidad Baja',
+      descripcion:
+        'Enfoca el contenido en la organización político-administrativa del territorio (municipio y departamento) y el respeto por la diversidad cultural. ' +
+        'Usa lenguaje claro y descriptivo. ' +
+        'Las actividades incluyen comprensión de lectura corta (un párrafo), mapas simples para colorear y cuestionarios guiados de falso/verdadero. ' +
+        'Evita conceptos abstractos; apóyate en ejemplos concretos y visuales.',
+      preguntasVisuales: 2,
+      taxonomiaVisual: 'Comprender/Aplicar',
+      conceptosClave: 3,
+      lineasReflexion: 4,
+    };
+  }
+  if (grado_numero <= 7) {
+    return {
+      nivel: 'Complejidad Baja-Media',
+      descripcion:
+        'Enfoca el contenido en la identificación, descripción y comparación de fenómenos sociales y geográficos. ' +
+        'Diseña actividades guiadas con reconocimiento de conceptos clave y cartografía básica. ' +
+        'Las preguntas pueden pedir que el estudiante compare, clasifique o describa con sus propias palabras.',
+      preguntasVisuales: 3,
+      taxonomiaVisual: 'Analizar (comparar, clasificar, relacionar causas)',
+      conceptosClave: 4,
+      lineasReflexion: 4,
+    };
+  }
+  if (grado_numero <= 9) {
+    return {
+      nivel: 'Complejidad Media-Alta',
+      descripcion:
+        'Enfoca el contenido en la explicación de causas y consecuencias, la argumentación y el análisis de múltiples perspectivas o fuentes históricas. ' +
+        'Las actividades deben exigir justificar opiniones, contrastar fuentes y elaborar textos cortos de análisis. ' +
+        'Las preguntas deben ser abiertas y requerir razonamiento, no solo memorización.',
+      preguntasVisuales: 4,
+      taxonomiaVisual: 'Analizar/Evaluar (explicación multicausal)',
+      conceptosClave: 4,
+      lineasReflexion: 5,
+    };
+  }
+  return {
+    nivel: 'Complejidad Alta / Avanzada',
+    descripcion:
+      'Enfoca el contenido en el pensamiento sistémico, el análisis crítico de modelos macroeconómicos, la evaluación de impactos globales y locales ' +
+      'y la formulación de propuestas de solución a problemáticas reales. ' +
+      'Las preguntas deben ser abiertas, problematizadoras y de nivel universitario introductorio. ' +
+      'Exige argumentación con evidencias, perspectivas múltiples y postura crítica fundamentada.',
+    preguntasVisuales: 4,
+    taxonomiaVisual: 'Evaluar/Crear (juicio crítico, deconstrucción de discursos)',
+    conceptosClave: 5,
+    lineasReflexion: 6,
+  };
+}
 
 /**
  * Construye el prompt estructurado completo que se envía a ChatGPT.
@@ -256,6 +333,16 @@ function buildPromptEstructurado(
   }
 ): string {
   const { solicitud_docente, numero_estudiantes, duracion_sesion } = opciones;
+  const complejidad = getComplejidadPorGrado(dba.grado_numero);
+
+  const lineasRespuestaVisual = Array(3).fill('    _________________________').join('\n');
+  const lineasReflexion = Array(complejidad.lineasReflexion).fill('    _________________________').join('\n');
+
+  const partBCount  = Math.max(0, complejidad.preguntasVisuales - 2);
+  const partBLetras = ['c', 'd'].slice(0, partBCount);
+  const partBBloque = partBCount > 0
+    ? `\n\n   **Parte B — Comprensión del Tema** (${partBLetras.join(', ')}): Formula exactamente ${partBCount} pregunta${partBCount > 1 ? 's' : ''} de nivel taxonómico ${complejidad.taxonomiaVisual} orientadas directamente al contenido del DBA, análisis de causas/consecuencias o situaciones problema del contexto colombiano. Estas preguntas NO deben depender de la imagen. Cada una incluye 3 líneas de respuesta:\n${lineasRespuestaVisual}`
+    : '';
 
   return `Actúa como un experto en pedagogía del Ministerio de Educación Nacional de Colombia. Tu tarea es diseñar una guía de aprendizaje para Ciencias Sociales estrictamente alineada con los Derechos Básicos de Aprendizaje (DBA).
 
@@ -271,6 +358,13 @@ function buildPromptEstructurado(
 - Número de estudiantes: ${numero_estudiantes}
 - Duración de la sesión: ${duracion_sesion}
 
+### LINEAMIENTOS PEDAGÓGICOS MEN 2026 (OBLIGATORIO):
+Debes enfocar los contenidos bajo los lineamientos actuales del MEN: prioriza el desarrollo del pensamiento crítico, la formación ciudadana, la conciencia histórico-temporal y el pensamiento sistémico ejemplo: (comprender cómo las decisiones económicas afectan el entorno social y ambiental). Evita el enfoque tradicional de memorización de datos o geografía descriptiva.
+
+### COMPLEJIDAD Y NIVEL DE LENGUAJE — GRADO ${dba.grado_numero}° (${complejidad.nivel}):
+${complejidad.descripcion}
+Adapta el vocabulario, la extensión de los textos, el tipo de preguntas y las actividades para que sean apropiadas a este nivel. Esta regla aplica a TODAS las secciones de la guía sin excepción.
+
 ### INSTRUCCIONES DE DISEÑO Y ESTRUCTURA:
 Debes generar la guía siguiendo esta estructura de bloques. Para cada sección usa títulos de Markdown (##).
 
@@ -284,19 +378,19 @@ Debes generar la guía siguiendo esta estructura de bloques. Para cada sección 
 8. **ATENCIÓN A LA DIVERSIDAD**: Adaptaciones específicas para diferentes ritmos de aprendizaje.
 9. **ACTIVIDAD PRÁCTICA IMPRIMIBLE**: Diseña una hoja de trabajo imprimible para que el estudiante complete en papel. Esta sección DEBE comenzar con el encabezado exacto "## ACTIVIDAD PRÁCTICA IMPRIMIBLE" y contener los siguientes elementos en orden (NO incluyas campos de Nombre/Grado/Fecha — el sistema los agrega automáticamente):
 
-   a) **Ejercicio 1 — Apertura Visual** Inserta aquí la etiqueta [IMAGE: "descripción detallada"]. La imagen debe actuar como el núcleo visual de la actividad. Justo debajo, formula 2 preguntas de comprensión que obliguen al estudiante a observar la imagen y relacionarla con el texto. Incluye 3 líneas de respuesta:
-    _________________________
-    _________________________
-    _________________________
+   a) **Ejercicio 1 — Apertura Visual e Integración Temática** Inserta aquí la etiqueta [IMAGE: "descripción detallada"]. Divide las ${complejidad.preguntasVisuales} preguntas en dos partes:
 
-   c) **Ejercicio 2 — Análisis de Conceptos**: Crea una tabla Markdown con dos columnas: "Concepto clave" y "Lo que significa (escribe aquí)". Incluye exactamente 4 conceptos del DBA. La columna de respuesta debe quedar vacía para que el estudiante la complete a mano.
+   **Parte A — Conexión Visual** (a, b): Formula exactamente 2 preguntas de nivel taxonómico ${complejidad.taxonomiaVisual} enfocadas estrictamente en la observación, lectura crítica y análisis de la ilustración. El estudiante debe responder basándose en lo que ve en la imagen. Cada pregunta incluye 3 líneas de respuesta:
+${lineasRespuestaVisual}${partBBloque}
+
+   c) **Ejercicio 2 — Análisis de Conceptos**: Crea una tabla Markdown con dos columnas: "Concepto clave" y "Lo que significa (escribe aquí)". Incluye EXACTAMENTE ${complejidad.conceptosClave} conceptos clave extraídos del DBA. La columna de respuesta debe quedar vacía para que el estudiante la complete a mano.
       Ejemplo de estructura:
       | Concepto clave | Lo que significa (escribe aquí) |
       |---|---|
       | [Concepto 1] | |
-      | [Concepto 2] | |
 
-   d) **Ejercicio 3 — Reflexión personal** (nivel evaluación de la Taxonomía de Bloom): Una sola pregunta abierta que invite al estudiante a conectar el DBA con su propia realidad o contexto colombiano. Incluye 5 líneas de respuesta con guiones bajos.
+   d) **Ejercicio 3 — Reflexión personal** (nivel ${complejidad.taxonomiaVisual} de la Taxonomía de Bloom): Una sola pregunta abierta que invite al estudiante a conectar el DBA con su propia realidad o contexto colombiano. Deja EXACTAMENTE ${complejidad.lineasReflexion} líneas de respuesta con guiones bajos:
+${lineasReflexion}
 
      Al finalizar la sección incluye: "Criterio de evaluación: _________________________ Calificación: _____"
 
