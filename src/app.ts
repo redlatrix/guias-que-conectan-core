@@ -16,8 +16,19 @@ import './config/storage';
 const app = express();
 const cors = require('cors');
 
+// CORS_ORIGINS en .env: lista separada por comas de los dominios permitidos.
+// Ejemplo: CORS_ORIGINS=http://localhost:5173,https://app.guiasqueconectan.ml-ware.com
+const allowedOrigins: string[] = (
+  process.env.CORS_ORIGINS ?? 'http://localhost:5173'
+).split(',').map((o) => o.trim());
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://app.guiasqueconetan.ml-ware.com'],
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Permitir peticiones sin origin (Postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin no permitido → ${origin}`));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,

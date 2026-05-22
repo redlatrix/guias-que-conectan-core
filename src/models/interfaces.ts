@@ -59,6 +59,10 @@ export interface Guia {
   contenido_json: BloqueContenido[];
   creado_en?: Date;
   actualizado_en?: Date;
+  docente_nombre?: string;
+  grado_nombre?: string;
+  grado_numero?: number;
+  area?: string;
 }
 
 export type TipoAccion = 'generar' | 'iterar' | 'editar';
