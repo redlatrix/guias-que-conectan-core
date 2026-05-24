@@ -57,13 +57,11 @@ export const guiaRepository = {
              gr.nombre AS grado_nombre,
              gr.numero AS grado_numero,
              gr.area   AS area,
-             doc.nombre AS docente_nombre,
              CONCAT(d.codigo_men, ' ', d.enunciado_oficial) as titulo
       FROM guia g
       INNER JOIN dba_catalogo      d   ON g.dba_catalogo_id = d.id
       INNER JOIN grado             gr  ON d.grado_id        = gr.id
       INNER JOIN sesion_generacion s   ON g.sesion_id        = s.id
-      LEFT  JOIN docente           doc ON doc.usuario_id     = s.docente_id
       WHERE g.es_version_activa = 1
     `;
     const params: (number | string)[] = [];
@@ -178,13 +176,11 @@ export const guiaRepository = {
              gr.nombre AS grado_nombre,
              gr.numero AS grado_numero,
              gr.area   AS area,
-             doc.nombre AS docente_nombre,
             CONCAT(d.codigo_men , ' ' , d.enunciado_oficial) AS titulo
       FROM guia g
       INNER JOIN dba_catalogo      d   ON g.dba_catalogo_id = d.id
       INNER JOIN grado             gr  ON d.grado_id        = gr.id
       INNER JOIN sesion_generacion s   ON g.sesion_id        = s.id
-      LEFT  JOIN docente           doc ON doc.usuario_id     = s.docente_id
       WHERE g.estado = 'publicado' AND g.es_version_activa = 1
       ORDER BY g.creado_en DESC
     `);
