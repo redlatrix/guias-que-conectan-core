@@ -22,40 +22,33 @@ export const guiaService = {
     numero_estudiantes: number;
     duracion_sesion:    string;
   }): Promise<Guia> {
-    // 1. Cargar la sesión
     const sesion = await sesionRepository.findById(data.sesion_id);
     if (!sesion) {
       throw Object.assign(new Error('Sesión no encontrada'), { status: 404 });
     }
 
-    // 2. Obtener el DBA con contexto de grado
     const dba = await catalogoRepository.findDBAWithContext(sesion.dba_catalogo_id);
     if (!dba) {
       throw Object.assign(new Error('DBA del catálogo no encontrado'), { status: 404 });
     }
 
-    // 2b. Obtener la competencia como metadato independiente desde la sesión
     const competencia = sesion.competencia_id
       ? await catalogoRepository.findCompetenciaById(sesion.competencia_id)
       : null;
 
-    // 3. Construir el prompt estructurado final
     const promptCompleto = buildPromptEstructurado(dba, competencia, {
       solicitud_docente:  data.prompt_docente,
       numero_estudiantes: data.numero_estudiantes,
       duracion_sesion:    data.duracion_sesion,
     });
 
-    // 4. Mensajes para ChatGPT:
-    //    El prompt estructurado va directamente en el 'user' para mayor control.
-    //    El 'system' lo usamos solo para definir el rol del asistente.
     const messages: ChatMessage[] = [
       {
         role: 'system',
         content:
           'Eres un experto en pedagogía del Ministerio de Educación Nacional de Colombia. ' +
           'Diseñas guías de aprendizaje para Ciencias Sociales estrictamente alineadas con los ' +
-          'Derechos Básicos de Aprendizaje (DBA). Siempre respondes en Markdown limpio y estructurado.',
+          'Derechos Básicos de Aprendizaje (DBA) y lineamientos del MEN. Siempre respondes en Markdown limpio y estructurado.',
       },
       {
         role: 'user',
@@ -63,17 +56,11 @@ export const guiaService = {
       },
     ];
 
-    // 5. Llamar a ChatGPT
-    console.log('🤖 Consultando ChatGPT...');
-    console.log(`   DBA: ${dba.codigo_men} — Grado ${dba.grado_numero}: ${dba.grado_nombre}`);
     let respuestaRaw = await openaiService.chat(messages);
 
-    // 5b. Fallback: si GPT no incluyó el tag [IMAGE:], lo inyectamos
     if (!respuestaRaw.includes('[IMAGE:')) {
-      console.log('⚠️  GPT no incluyó [IMAGE:], inyectando fallback...');
       const descripcionFallback = buildImageFallback(dba, data.prompt_docente);
       const tagFallback = `\n\n[IMAGE: "${descripcionFallback}"]\n\n`;
-      // Insertar justo antes de la sección ## ACTIVIDADES DE DESARROLLO (o al final si no existe)
       const marcador = respuestaRaw.match(/^##\s+ACTIVIDADES DE DESARROLLO/im);
       if (marcador?.index !== undefined) {
         respuestaRaw =
@@ -85,7 +72,6 @@ export const guiaService = {
       }
     }
 
-    // 6. Crear registro temporal de la guía para vincular recursos
     const titulo = extraerTitulo(respuestaRaw) || `Guía ${dba.codigo_men} — ${dba.grado_nombre}`;
     const guiaTemporal = await guiaRepository.create({
       sesion_id:       data.sesion_id,
@@ -95,31 +81,22 @@ export const guiaService = {
       version_numero:  1,
     });
 
-    // 7. Registrar la iteración en BD (guardamos el prompt completo que se envió)
     await iteracionRepository.create({
       guia_id:          guiaTemporal.id,
       tipo_accion:      'generar',
       prompt_docente:   promptCompleto,
       respuesta_ia_raw: respuestaRaw,
     });
-
-    // 8. Procesar etiquetas [IMAGE: "..."] → DALL-E → disco → BD
-    console.log('🖼️  Procesando imágenes...');
+  
     const textoProcesado = await imageParserService.process(respuestaRaw, guiaTemporal.id, data.prompt_docente);
 
-    // 9. Convertir Markdown procesado → array de bloques JSON
     const contenidoJson = markdownToJson(textoProcesado);
-
-    // 10. Actualizar la guía con el contenido final
     const guiaFinal = await guiaRepository.update(guiaTemporal.id, {
       titulo,
       contenido_json: contenidoJson,
     });
 
-    // 11. Marcar sesión como completada
     await sesionRepository.updateEstado(data.sesion_id, 'completada');
-
-    console.log(`✅ Guía generada: ID ${guiaFinal!.id} — "${titulo}"`);
     return guiaFinal!;
   },
 
@@ -141,7 +118,6 @@ export const guiaService = {
       throw Object.assign(new Error('Sesión asociada no encontrada'), { status: 404 });
     }
 
-    // Historial de la conversación (máx. últimas 3 iteraciones para no exceder tokens)
     const iteracionesAnteriores = await iteracionRepository.findByGuia(data.guia_id);
     const messages: ChatMessage[] = [
       {

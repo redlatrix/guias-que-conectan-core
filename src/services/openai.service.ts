@@ -1,22 +1,15 @@
 import openaiClient from '../config/openai';
-
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
-/**
- * Wrapper del SDK de OpenAI v4.
- * Expone chat completions y generación de imágenes con DALL-E.
- */
 export const openaiService = {
-
   /**
    * Llama a ChatGPT con una lista de mensajes.
-   * Retorna el texto de la respuesta.
    */
   async chat(messages: ChatMessage[]): Promise<string> {
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const model = process.env.OPENAI_MODEL || 'gpt-5o-mini';
 
     const completion = await openaiClient.chat.completions.create({
       model,
@@ -31,13 +24,7 @@ export const openaiService = {
   },
 
   /**
-   * Genera una imagen con DALL-E a partir de un prompt.
-   * Retorna la URL temporal (válida ~60 minutos).
-   */
-  /**
    * Genera una imagen con gpt-image-1 / gpt-image-1-mini.
-   * Los modelos nuevos devuelven base64 (b64_json), no URL temporal.
-   * Retorna el string base64 para que el caller lo persista en disco.
    */
   async generateImage(prompt: string): Promise<string> {
     const model = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1-mini';
@@ -46,7 +33,7 @@ export const openaiService = {
       model,
       prompt,
       n: 1,
-      size: '1024x1024',
+      size: '512x512',
     });
 
     const b64 = response.data?.[0]?.b64_json;

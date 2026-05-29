@@ -5,8 +5,6 @@ import { imageStorageService } from './image-storage.service';
 import { recursoRepository } from '../repositories/recurso.repository';
 
 export const imageParserService = {
-
-  /** Genera una sola imagen DALL-E y la persiste. Devuelve la URL local. */
   async generarImagen(prompt: string, guiaId: number): Promise<string> {
     const dallePrompt = `Colorful educational infographic illustration, flat design, isometric style, soft pastel colors, clean and simple composition, no text labels, no photorealism, no real people. Visual elements related to: ${prompt}`;
     const b64      = await openaiService.generateImage(dallePrompt);
@@ -40,8 +38,7 @@ export const imageParserService = {
         ? '\n\n**📚 Recursos para profundizar:**\n' + recursos.join('\n')
         : '';
 
-      // 2. Generar imagen (puede fallar sin afectar los recursos)
-      let imagenMarkdown = ''; // vacío si imagen deshabilitada o falla
+      let imagenMarkdown = ''; 
       if (imageEnabled) try {
         console.log(`🎨 Generando imagen: "${prompt}"`);
 
@@ -64,7 +61,6 @@ export const imageParserService = {
         console.error(`❌ Error procesando imagen "${prompt}": ${errMsg}`);
       }
 
-      // 3. Reemplazar etiqueta — recursos aparecen siempre
       processedText = processedText.replace(fullTag, imagenMarkdown + recursosBlock);
     }
 
@@ -91,7 +87,6 @@ function extraerPreguntaProblematizadora(markdown: string): string | null {
 async function buscarRecursos(tema: string): Promise<string[]> {
   const recursos: string[] = [];
 
-  // 1. Artículos de Wikipedia en español (API real, sin alucinaciones)
   try {
     const { data } = await axios.get('https://es.wikipedia.org/w/api.php', {
       params: {
@@ -119,7 +114,6 @@ async function buscarRecursos(tema: string): Promise<string[]> {
     console.warn('⚠️  Wikipedia API no respondió');
   }
 
-  // 2. Artículos académicos — Google Scholar
   const scholarQ = encodeURIComponent(`${tema} colombia educación`);
   recursos.push(`- 🎓 [Artículos académicos sobre este tema — Google Scholar](https://scholar.google.com/scholar?q=${scholarQ})`);
 
