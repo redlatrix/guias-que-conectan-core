@@ -33,7 +33,7 @@ export const openaiService = {
       model,
       prompt,
       n: 1,
-      size: '512x512',
+      size: '1024x1024',
     });
 
     const b64 = response.data?.[0]?.b64_json;
