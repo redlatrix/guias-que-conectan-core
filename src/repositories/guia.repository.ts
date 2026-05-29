@@ -51,41 +51,52 @@ export const guiaRepository = {
     dba_id?:     number;
     estado?:     EstadoGuia;
     docente_id?: number;
-  }): Promise<Guia[]> {
-    let sql = `
-      SELECT g.*,
-             gr.nombre AS grado_nombre,
-             gr.numero AS grado_numero,
-             gr.area   AS area,
-             CONCAT(d.codigo_men, ' ', d.enunciado_oficial) as titulo
-      FROM guia g
-      INNER JOIN dba_catalogo      d   ON g.dba_catalogo_id = d.id
-      INNER JOIN grado             gr  ON d.grado_id        = gr.id
-      INNER JOIN sesion_generacion s   ON g.sesion_id        = s.id
-      WHERE g.es_version_activa = 1
-    `;
+    page?:       number;
+    limit?:      number;
+  }): Promise<{ data: Guia[]; total: number }> {
+    const page  = filtros.page  ?? 1;
+    const limit = filtros.limit ?? 6;
+    const offset = (page - 1) * limit;
+
+    let where = ' WHERE g.es_version_activa = 1';
     const params: (number | string)[] = [];
 
     if (filtros.docente_id) {
-      sql += ' AND s.docente_id = ?';
+      where += ' AND s.docente_id = ?';
       params.push(filtros.docente_id);
     }
     if (filtros.grado_id) {
-      sql += ' AND d.grado_id = ?';
+      where += ' AND d.grado_id = ?';
       params.push(filtros.grado_id);
     }
     if (filtros.dba_id) {
-      sql += ' AND g.dba_catalogo_id = ?';
+      where += ' AND g.dba_catalogo_id = ?';
       params.push(filtros.dba_id);
     }
     if (filtros.estado) {
-      sql += ' AND g.estado = ?';
+      where += ' AND g.estado = ?';
       params.push(filtros.estado);
     }
-    sql += ' ORDER BY g.creado_en DESC';
 
-    const [rows] = await pool.query<RowDataPacket[]>(sql, params);
-    return rows.map(parseGuia);
+    const joins = `
+      FROM guia g
+      INNER JOIN dba_catalogo      d   ON g.dba_catalogo_id = d.id
+      INNER JOIN grado             gr  ON d.grado_id        = gr.id
+      INNER JOIN sesion_generacion s   ON g.sesion_id        = s.id`;
+
+    const [countRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS total ${joins} ${where}`, params
+    );
+    const total = countRows[0].total as number;
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT g.*, gr.nombre AS grado_nombre, gr.numero AS grado_numero,
+              gr.area AS area, CONCAT(d.codigo_men, ' ', d.enunciado_oficial) as titulo
+       ${joins} ${where} ORDER BY g.creado_en DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    return { data: rows.map(parseGuia), total };
   },
 
   /**
@@ -170,20 +181,30 @@ export const guiaRepository = {
     return this.findById(id);
   },
 
-  async findAllPublicas(): Promise<Guia[]> {
-    const [rows] = await pool.query<RowDataPacket[]>(`
-      SELECT g.*,
-             gr.nombre AS grado_nombre,
-             gr.numero AS grado_numero,
-             gr.area   AS area,
-            CONCAT(d.codigo_men , ' ' , d.enunciado_oficial) AS titulo
+  async findAllPublicas(pagination?: { page?: number; limit?: number }): Promise<{ data: Guia[]; total: number }> {
+    const page  = pagination?.page  ?? 1;
+    const limit = pagination?.limit ?? 6;
+    const offset = (page - 1) * limit;
+
+    const joins = `
       FROM guia g
       INNER JOIN dba_catalogo      d   ON g.dba_catalogo_id = d.id
       INNER JOIN grado             gr  ON d.grado_id        = gr.id
-      INNER JOIN sesion_generacion s   ON g.sesion_id        = s.id
-      WHERE g.estado = 'publicado' AND g.es_version_activa = 1
-      ORDER BY g.creado_en DESC
-    `);
-    return rows.map(parseGuia);
+      INNER JOIN sesion_generacion s   ON g.sesion_id        = s.id`;
+    const where = " WHERE g.estado = 'publicado' AND g.es_version_activa = 1";
+
+    const [countRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS total ${joins} ${where}`
+    );
+    const total = countRows[0].total as number;
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT g.*, gr.nombre AS grado_nombre, gr.numero AS grado_numero,
+              gr.area AS area, CONCAT(d.codigo_men, ' ', d.enunciado_oficial) AS titulo
+       ${joins} ${where} ORDER BY g.creado_en DESC LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+
+    return { data: rows.map(parseGuia), total };
   },
 };

@@ -177,12 +177,20 @@ export const guiaService = {
     dba_id?:     number;
     estado?:     EstadoGuia;
     docente_id?: number;
-  }): Promise<Guia[]> {
-    return guiaRepository.findAll(filtros);
+    page?:       number;
+    limit?:      number;
+  }) {
+    const page  = filtros.page  ?? 1;
+    const limit = filtros.limit ?? 6;
+    const { data, total } = await guiaRepository.findAll(filtros);
+    return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   },
 
-  async listarPublicas(): Promise<Guia[]> {
-    return guiaRepository.findAllPublicas();
+  async listarPublicas(pagination?: { page?: number; limit?: number }) {
+    const page  = pagination?.page  ?? 1;
+    const limit = pagination?.limit ?? 6;
+    const { data, total } = await guiaRepository.findAllPublicas(pagination);
+    return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   },
 
   async obtenerPublica(id: number): Promise<Guia> {

@@ -7,8 +7,10 @@ export const guiaController = {
 
   async listarPublicas(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const guias = await guiaService.listarPublicas();
-      res.json(guias);
+      const page  = Number(req.query.page)  || 1;
+      const limit = Number(req.query.limit) || 6;
+      const result = await guiaService.listarPublicas({ page, limit });
+      res.json(result);
     } catch (err) {
       next(err);
     }
@@ -70,19 +72,23 @@ export const guiaController = {
         estado?:    string;
         mis_guias?: string;
       };
+      const page  = Number(req.query.page)  || 1;
+      const limit = Number(req.query.limit) || 6;
 
       let docente_id: number | undefined;
       if (mis_guias === 'true') {
         docente_id = req.user!.id;
       }
 
-      const guias = await guiaService.listar({
+      const result = await guiaService.listar({
         grado_id:   grado_id ? Number(grado_id) : undefined,
         dba_id:     dba_id   ? Number(dba_id)   : undefined,
         estado:     estado   as EstadoGuia | undefined,
         docente_id,
+        page,
+        limit,
       });
-      res.json(guias);
+      res.json(result);
     } catch (err) {
       next(err);
     }
@@ -100,16 +106,20 @@ export const guiaController = {
         dba_id?:   string;
         estado?:   string;
       };
+      const page  = Number(req.query.page)  || 1;
+      const limit = Number(req.query.limit) || 9;
 
       const docente_id = req.user!.id;
 
-      const guias = await guiaService.listar({
+      const result = await guiaService.listar({
         docente_id,
         grado_id: grado_id ? Number(grado_id) : undefined,
         dba_id:   dba_id   ? Number(dba_id)   : undefined,
         estado:   estado   as EstadoGuia | undefined,
+        page,
+        limit,
       });
-      res.json(guias);
+      res.json(result);
     } catch (err) {
       next(err);
     }
