@@ -12,17 +12,13 @@ import { BloqueContenido, TipoBloque } from '../models/interfaces';
  * Los bloques contiguos del mismo tipo se agrupan.
  */
 export function markdownToJson(text: string): BloqueContenido[] {
-  // Dividir por secciones de nivel 2 (##) para crear bloques naturales
   const sections = text.split(/(?=^##\s)/m).filter(s => s.trim().length > 0);
 
   const bloques: BloqueContenido[] = [];
 
   for (const section of sections) {
-    // Extraer imágenes Markdown dentro de la sección
     const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
     let imgMatch: RegExpExecArray | null;
-
-    // Procesar la sección línea a línea
     const lines = section.split('\n');
     let currentTipo: TipoBloque = 'texto';
     let currentLines: string[] = [];
@@ -50,7 +46,6 @@ export function markdownToJson(text: string): BloqueContenido[] {
     }
     flushBloque();
 
-    // Segunda pasada: separar las imágenes embebidas dentro de bloques de texto
     const bloquesConImagenes: BloqueContenido[] = [];
     for (const bloque of bloques) {
       if (bloque.tipo !== 'imagen') {
@@ -70,14 +65,11 @@ export function markdownToJson(text: string): BloqueContenido[] {
 function detectTipo(line: string): TipoBloque {
   const trimmed = line.trim();
 
-  // Imagen Markdown
   if (/^!\[.*?\]\(\/storage\/images\/.+\)/.test(trimmed)) return 'imagen';
 
-  // Actividad
   if (/^#{1,3}\s*(actividad|taller|ejercicio)/i.test(trimmed)) return 'actividad';
   if (/^\*\*(actividad|taller|ejercicio)/i.test(trimmed)) return 'actividad';
 
-  // Cuestionario / Preguntas
   if (/^#{1,3}\s*(pregunta|preguntas|cuestionario|evaluaci[oó]n)/i.test(trimmed)) return 'cuestionario';
   if (/^\*\*(pregunta|preguntas|cuestionario)/i.test(trimmed)) return 'cuestionario';
   if (/^\d+\.\s+¿/.test(trimmed)) return 'cuestionario';
@@ -106,8 +98,11 @@ function buildMetadata(tipo: TipoBloque, contenido: string): Record<string, unkn
 }
 
 function extraerDuracion(text: string): number | null {
-  const m = text.match(/(\d+)\s*min/i);
-  return m ? parseInt(m[1]) : null;
+  const minMatch = text.match(/(\d+)\s*min/i);
+  if (minMatch) return parseInt(minMatch[1]);
+  const horaMatch = text.match(/(\d+)\s*h(?:ora)?s?/i);
+  if (horaMatch) return parseInt(horaMatch[1]) * 60;
+  return null;
 }
 
 function extraerTipoActividad(text: string): string | null {
@@ -127,13 +122,11 @@ function splitImagesFromText(bloque: BloqueContenido): BloqueContenido[] {
   let match: RegExpExecArray | null;
 
   while ((match = imgRegex.exec(bloque.contenido)) !== null) {
-    // Texto antes de la imagen
     const before = bloque.contenido.slice(lastIndex, match.index).trim();
     if (before) {
       partes.push({ tipo: 'texto', contenido: before, metadata: {} });
     }
 
-    // La imagen
     partes.push({
       tipo: 'imagen',
       contenido: match[0],
@@ -142,8 +135,7 @@ function splitImagesFromText(bloque: BloqueContenido): BloqueContenido[] {
 
     lastIndex = match.index + match[0].length;
   }
-
-  // Texto restante después de la última imagen
+  
   const after = bloque.contenido.slice(lastIndex).trim();
   if (after) {
     partes.push({ tipo: bloque.tipo, contenido: after, metadata: bloque.metadata });

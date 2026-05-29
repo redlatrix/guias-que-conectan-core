@@ -347,9 +347,9 @@ Debes generar la guía siguiendo esta estructura de bloques. Para cada sección 
 1. **IDENTIFICACIÓN**: Datos generales (área, grado, DBA).
 2. **PREGUNTA PROBLEMATIZADORA**: Una pregunta retadora y contextualizada para el estudiante.
 3. **PROPÓSITOS**: Saber (conceptual), Saber Hacer (procedimental) y Saber Ser (actitudinal).
-4. **ACTIVIDADES DE INICIO**: Exploración de saberes previos. Estima el tiempo necesario.
-5. **ACTIVIDADES DE DESARROLLO**: Conceptualización y práctica. Estima el tiempo necesario.
-6. **ACTIVIDADES DE CIERRE**: Producto final y síntesis. Estima el tiempo necesario.
+4. **ACTIVIDADES DE INICIO**: Exploración de saberes previos. Incluye al inicio de esta sección exactamente: "**Duración estimada: X min**" donde X es el tiempo asignado.
+5. **ACTIVIDADES DE DESARROLLO**: Conceptualización y práctica. Incluye al inicio de esta sección exactamente: "**Duración estimada: X min**".
+6. **ACTIVIDADES DE CIERRE**: Producto final y síntesis. Incluye al inicio de esta sección exactamente: "**Duración estimada: X min**".
 7. **EVALUACIÓN**: Criterios formativos e instrumento de evaluación sugerido.
 8. **ATENCIÓN A LA DIVERSIDAD**: Adaptaciones específicas para diferentes ritmos de aprendizaje.
 9. **ACTIVIDAD PRÁCTICA IMPRIMIBLE**: Diseña una hoja de trabajo imprimible para que el estudiante complete en papel. Esta sección DEBE comenzar con el encabezado exacto "## ACTIVIDAD PRÁCTICA IMPRIMIBLE" y contener los siguientes elementos en orden (NO incluyas campos de Nombre/Grado/Fecha — el sistema los agrega automáticamente):
@@ -383,6 +383,7 @@ ${lineasReflexion}
     UBICACIÓN: Colócala donde aporte más valor educativo, preferiblemente al inicio de la 
     ACTIVIDAD PRÁCTICA IMPRIMIBLE para que sirva de base a los ejercicios.
 3. **REALISMO**: Las actividades deben ser posibles para ${numero_estudiantes} estudiantes en ${duracion_sesion}.
+7. **DISTRIBUCIÓN DE TIEMPO (OBLIGATORIO)**: La suma de las duraciones de TODAS las actividades (inicio + desarrollo + cierre) DEBE ser igual a ${duracion_sesion}. Distribuye el tiempo proporcionalmente: inicio ~20%, desarrollo ~50%, cierre ~30%. Escribe siempre "**Duración estimada: X min**" al inicio de cada sección de actividad.
 4. **NO ALUCINACIÓN**: Si sugieres un recurso externo (video, libro), no inventes el nombre; descríbelo como "Recurso sugerido sobre [Tema]".
 5. **CONTEXTUALIZACIÓN**: Usa ejemplos del contexto colombiano, territorios y realidades locales.
 6. **ACTIVIDAD IMPRIMIBLE — OBLIGATORIO**: DEBES incluir la sección "## ACTIVIDAD PRÁCTICA IMPRIMIBLE" como la última sección de la guía. Las líneas de respuesta se representan con 25 guiones bajos seguidos: _________________________ — Las tablas usan formato Markdown estándar con | para columnas. NO omitas esta sección bajo ninguna circunstancia.`;
